@@ -1,0 +1,9 @@
+.gradle
+build
+gradle
+markdown.html
+markdown.pdf
+out
+test.json
+.idea/gradle.xml
+.idea/wp-calendar.iml
