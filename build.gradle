@@ -1,6 +1,7 @@
 plugins {
-    id 'java'
-    id 'org.jetbrains.kotlin.jvm' version '1.3.70'
+    id 'org.jetbrains.kotlin.jvm' version '1.4.31'
+    id 'org.openjfx.javafxplugin' version '0.0.9'
+    id 'application'
 }
 
 group 'org.fos'
@@ -13,15 +14,23 @@ repositories {
     jcenter()
 }
 
-dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    compile "com.github.kittinunf.fuel:fuel:2.2.1"
-    compile "com.github.kittinunf.fuel:fuel-gson:2.2.1"
-    compile "org.jetbrains.kotlinx:kotlinx-html-jvm:0.7.1"
-    compile "ch.tutteli.niok:niok:1.3.4"
-    compile "com.atlassian.commonmark:commonmark:0.14.0"
-    compile "com.google.code.gson:gson:2.8.6"
+javafx {
+    version = '11.0.2'
+    modules = [ 'javafx.controls', 'javafx.web' ]
 }
+
+dependencies {
+    compile 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    compile 'org.jetbrains.kotlin:kotlin-reflect'
+    compile 'com.github.kittinunf.fuel:fuel:2.3.1'
+    compile 'com.github.kittinunf.fuel:fuel-gson:2.3.1'
+    compile 'org.jetbrains.kotlinx:kotlinx-html-jvm:0.7.2'
+    compile 'ch.tutteli.niok:niok:1.3.4'
+    compile 'com.atlassian.commonmark:commonmark:0.14.0'
+    compile 'com.google.code.gson:gson:2.8.6'
+}
+
+mainClassName = 'org.fos.gui.CalendarApp'
 
 jar {
     manifest {
@@ -30,6 +39,34 @@ jar {
 
     from {
         configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+task deploy_linux(type: Zip) {
+    group = 'distribution'
+    dependsOn jar
+    archiveFileName = 'linux.zip'
+    destinationDirectory = file("$buildDir/dist")
+    from(jar, 'wp-calendar.sh')
+    from('lib/jre-linux') {
+        into 'jre'
+    }
+    from('lib/jfx-linux') {
+        into 'jfx'
+    }
+}
+
+task deploy_windows(type:  Zip) {
+    group = 'distribution'
+    dependsOn jar
+    archiveFileName = 'windows.zip'
+    destinationDirectory = file("$buildDir/dist")
+    from(jar, 'wp-calendar.cmd')
+    from('lib/jdk-windows') {
+        into 'jdk'
+    }
+    from('lib/jfx-windows') {
+        into 'jfx'
     }
 }
 

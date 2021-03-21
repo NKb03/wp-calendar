@@ -12,9 +12,9 @@ import com.github.kittinunf.fuel.core.requests.CancellableRequest
 import com.github.kittinunf.fuel.gson.jsonBody
 import com.github.kittinunf.fuel.gson.responseObject
 
-private const val PASSWORD = "public_static_void"
 private const val USERNAME = "Nikolaus"
-private val title = Title("Konzerttermine")
+private const val PASSWORD = "VhgJ I5L1 xZEJ i91n FfBd 2nAD"
+private val title = Title("Termine")
 
 data class Title(val raw: String)
 
@@ -22,7 +22,7 @@ data class Content(val raw: String)
 
 data class Page(val title: Title, val content: Content)
 
-private const val ROUTE = "http://frankfurterorgelschule.de/wp-json/wp/v2/pages/345"
+private const val ROUTE = "http://carstenwiebusch.de/wp-json/wp/v2/pages/29"
 
 private fun Request.authenticate() = authentication().basic(USERNAME, PASSWORD)
 
