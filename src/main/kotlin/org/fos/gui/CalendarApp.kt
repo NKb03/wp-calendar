@@ -6,10 +6,12 @@ package org.fos.gui
 
 import com.google.gson.Gson
 import javafx.application.Application
+import javafx.application.Platform
 import javafx.scene.Parent
 import javafx.scene.Scene
-import javafx.scene.control.Alert
+import javafx.scene.control.*
 import javafx.scene.control.Alert.AlertType.CONFIRMATION
+import javafx.scene.control.Alert.AlertType.INFORMATION
 import javafx.scene.control.ButtonType.*
 import javafx.scene.layout.VBox
 import javafx.scene.web.WebView
@@ -18,6 +20,7 @@ import javafx.stage.FileChooser.ExtensionFilter
 import org.fos.*
 import java.io.File
 import java.util.prefs.Preferences
+import kotlin.concurrent.thread
 
 class CalendarApp : Application() {
     private val gson = Gson()
@@ -32,8 +35,8 @@ class CalendarApp : Application() {
 
     override fun start(stage: Stage) {
         this.stage = stage
-        val saved = pref.get(FILE_KEY, DEFAULT_VALUE)
-        if (saved != DEFAULT_VALUE) {
+        val saved = pref.get(FILE_KEY, DEFAULT_FILE_KEY)
+        if (saved != DEFAULT_FILE_KEY) {
             val file = File(saved)
             if (file.exists()) open(file)
         }
@@ -54,13 +57,14 @@ class CalendarApp : Application() {
                     YES,
                     NO,
                     CANCEL
-                ).showAndWait().ifPresent { answer ->
+                ).fixGlitch()
+                    .showAndWait().ifPresent { answer ->
                     when (answer) {
-                        YES    -> {
+                        YES -> {
                             save()
                             stage.close()
                         }
-                        NO     -> stage.close()
+                        NO -> stage.close()
                         CANCEL -> {
                         }
                     }
@@ -84,7 +88,12 @@ class CalendarApp : Application() {
                     open(file)
                 }
                 item("Veröffentlichen") {
-                    updateEventsPage(editor.all, AlertResponseHandler)
+                    val userData = getUserData()
+                    if (userData == null) {
+                        Alert(INFORMATION, "Du bist nicht eingeloggt").fixGlitch().showAndWait()
+                    } else {
+                        updateEventsPage(userData, editor.all, AlertResponseHandler)
+                    }
                 }
                 item("Vorschau") {
                     val events = editor.all
@@ -96,14 +105,88 @@ class CalendarApp : Application() {
                         showAndWait()
                     }
                 }
+                item("Login") {
+                    login()
+                }
+                item("Logout") {
+                    val answer = Alert(CONFIRMATION, "Willst du dich wirklich abmelden?", YES, NO).fixGlitch()
+                        .showAndWait().orElse(NO)
+                    if (answer == YES) logout()
+                }
             }
         }
         return VBox(menu, editor)
     }
 
+    private fun Dialog<*>.fixGlitch() {
+        isResizable = true
+        setOnShown {
+            thread {
+                Thread.sleep(10)
+                Platform.runLater {
+                    isResizable = false
+                }
+            }
+        }
+    }
+
+    private fun Alert.fixGlitch(): Alert {
+        isResizable = true
+        setOnShown {
+            thread {
+                Thread.sleep(10)
+                Platform.runLater {
+                    isResizable = false
+                }
+            }
+        }
+        return this
+    }
+
+    private fun getUserData(): UserData? {
+        val url = pref.get(CALENDAR_URL, null) ?: return null
+        val username = pref.get(USERNAME, null) ?: return null
+        val password = pref.get(PASSWORD, null) ?: return null
+        return UserData(url, username, password)
+    }
+
+    private fun logout() {
+        pref.remove(CALENDAR_URL)
+        pref.remove(USERNAME)
+        pref.remove(PASSWORD)
+    }
+
+    private fun login() {
+        with(Dialog<Unit>()) {
+            title = "Login"
+            val url = TextField()
+            val username = TextField()
+            val password = PasswordField()
+            url.promptText = "URL des Kalenders"
+            url.text = DEFAULT_ROUTE
+            username.promptText = "Benutzername"
+            password.promptText = "Passwort"
+            for (tf in listOf(url, username, password)) {
+                tf.prefWidth = 500.0
+            }
+            dialogPane.content = VBox(url, username, password)
+            dialogPane.buttonTypes.setAll(OK, CANCEL)
+            fixGlitch()
+            setResultConverter { btn ->
+                if (btn == OK) {
+                    pref.put(CALENDAR_URL, url.text)
+                    pref.put(USERNAME, username.text)
+                    pref.put(PASSWORD, password.text)
+                }
+            }
+            show()
+        }
+    }
+
+
     private fun save() {
-        val file = pref.get(FILE_KEY, DEFAULT_VALUE)
-        if (file == DEFAULT_VALUE) saveAs()
+        val file = pref.get(FILE_KEY, DEFAULT_FILE_KEY)
+        if (file == DEFAULT_FILE_KEY) saveAs()
         val f = File(file)
         if (f.exists()) {
             editor.saveAs(f, gson)
@@ -123,7 +206,11 @@ class CalendarApp : Application() {
 
     companion object {
         private const val FILE_KEY = "wp.calendar.file"
-        private const val DEFAULT_VALUE = "<default>"
+        private const val DEFAULT_FILE_KEY = "<default>"
+        private const val CALENDAR_URL = "wp.calendar.url"
+        private const val USERNAME = "wp.calendar.user.name"
+        private const val PASSWORD = "wp.calendar.user.password"
+        private const val DEFAULT_ROUTE = "http://carstenwiebusch.de/wp-json/wp/v2/pages/29"
 
         @JvmStatic
         fun main(args: Array<String>) {

@@ -6,6 +6,8 @@ package org.fos
 
 import java.time.LocalDate
 
+data class UserData(val calendarUrl: String, val username: String, val password: String)
+
 data class Markdown(val raw: String?)
 
 data class Location(val name: String?, val address: String?)
